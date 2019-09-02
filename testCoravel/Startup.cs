@@ -1,5 +1,7 @@
 using Coravel;
+using Coravel.Pro;
 using Coravel.Queuing.Interfaces;
+using Coravel.Scheduling.Schedule.Interfaces;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -24,8 +26,11 @@ namespace testCoravel
 
             services.AddEvents();
             services.AddQueue();
-            
+
             services.AddScoped<NotifyNewPost>();
+            services.AddScoped<MyJob>();
+
+            services.AddScheduler();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -37,21 +42,28 @@ namespace testCoravel
             app.UseAuthorization();
 
             var provider = app.ApplicationServices;
-            
+
             provider.ConfigureQueue()
                 .LogQueuedTaskProgress(provider.GetService<ILogger<IQueue>>());
-            
+
             var registration = provider.ConfigureEvents();
 
             registration
                 .Register<BlogPostCreated>()
                 .Subscribe<NotifyNewPost>();
 
+            provider.UseScheduler(scheduler =>
+            {
+                scheduler
+                    .Schedule<MyJob>()
+                    .EveryMinute();
+            }).LogScheduledTaskProgress(provider.GetService<ILogger<IScheduler>>());
+
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllerRoute(
-                    name: "default",
-                    pattern: "{controller=Home}/{action=Index}/{id?}");
+                    "default",
+                    "{controller=Home}/{action=Index}/{id?}");
             });
         }
     }
