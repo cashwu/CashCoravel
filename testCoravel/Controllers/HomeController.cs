@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Coravel.Events.Interfaces;
+using Coravel.Queuing.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using testCoravel.Models;
@@ -14,18 +15,20 @@ namespace testCoravel.Controllers
     {
         private readonly ILogger<HomeController> _logger;
         private readonly IDispatcher _dispatcher;
+        private readonly IQueue _queue;
 
-        public HomeController(ILogger<HomeController> logger, IDispatcher dispatcher)
+        public HomeController(ILogger<HomeController> logger, IDispatcher dispatcher, IQueue queue)
         {
             _logger = logger;
             _dispatcher = dispatcher;
+            _queue = queue;
         }
 
         public IActionResult Index()
         {
             return View();
         }
-        
+
         public async Task<IActionResult> Create()
         {
             var post = new Post();
@@ -33,6 +36,17 @@ namespace testCoravel.Controllers
             var blogPostCreated = new BlogPostCreated(post);
             await _dispatcher.Broadcast(blogPostCreated);
             _logger.LogInformation($"Broadcast - {post.Id}");
+
+            return Ok();
+        }
+
+        public IActionResult Queue()
+        {
+            var post = new Post();
+            _logger.LogInformation($"Create - {post.Id}");
+            var blogPostCreated = new BlogPostCreated(post);
+            _queue.QueueBroadcast(blogPostCreated);
+            _logger.LogInformation($"Queue - {post.Id}");
 
             return Ok();
         }
@@ -53,9 +67,9 @@ namespace testCoravel.Controllers
     {
         public Post()
         {
-           Id = Guid.NewGuid(); 
+            Id = Guid.NewGuid();
         }
-        
+
         public Guid Id { get; set; }
     }
 }

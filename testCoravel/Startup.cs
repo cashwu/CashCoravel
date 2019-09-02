@@ -1,8 +1,10 @@
 using Coravel;
+using Coravel.Queuing.Interfaces;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using testCoravel.Models;
 
 namespace testCoravel
@@ -21,6 +23,7 @@ namespace testCoravel
             services.AddControllersWithViews();
 
             services.AddEvents();
+            services.AddQueue();
             
             services.AddScoped<NotifyNewPost>();
         }
@@ -34,6 +37,10 @@ namespace testCoravel
             app.UseAuthorization();
 
             var provider = app.ApplicationServices;
+            
+            provider.ConfigureQueue()
+                .LogQueuedTaskProgress(provider.GetService<ILogger<IQueue>>());
+            
             var registration = provider.ConfigureEvents();
 
             registration
